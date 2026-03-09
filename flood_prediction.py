@@ -1,16 +1,16 @@
 import requests
 import joblib
+from geopy.geocoders import Nominatim
 
 # Load Model
 model = joblib.load("flood_model.pkl")
 
-loc = requests.get("https://geo.kamero.ai/api/geo").json()
-latitude = float(loc.get("latitude", 0))
-longitude = float(loc.get("longitude", 0))
-city = loc.get("city", "Unknown")
 
-weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current=relative_humidity_2m,precipitation,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=auto"
+city = input("Enter city name: ")
+geolocator = Nominatim(user_agent="geo_app")
+location = geolocator.geocode(city)
 
+weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={location.latitude}&longitude={location.longitude}&current=relative_humidity_2m,precipitation,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=auto"
 weather = requests.get(weather_url).json()
 
 # Extract values
