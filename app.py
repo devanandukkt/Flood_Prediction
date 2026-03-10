@@ -1,28 +1,34 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.templating import Jinja2Templates
 import joblib
 import requests
 from geopy.geocoders import Nominatim
 
 app = FastAPI()
 
+templates = Jinja2Templates(directory="templates")
+
 # Load ML Model
 model = joblib.load("flood_model.pkl")
 
 
 @app.get("/")
-def home():
-    return {"message": "Flood Prediction API is running"}
+def home(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 
 @app.get("/predict")
-def predict(city: str):
+def predict(request: Request, city: str):
     try:
         # Geolocation
         geolocator = Nominatim(user_agent="geo_app")
         location = geolocator.geocode(city)
 
         if not location:
-            return {"error": "Invalid city name"}
+            return templates.TemplateResponse(
+                "result.html",
+                {"request": request, "city": city, "prediction": "⚠️ Invalid city name!"}
+            )
 
         # Weather API
         weather_url = (
@@ -35,7 +41,6 @@ def predict(city: str):
 
         weather = requests.get(weather_url).json()
 
-        # Extract weather features
         max_temp = weather["daily"]["temperature_2m_max"][0]
         min_temp = weather["daily"]["temperature_2m_min"][0]
         rainfall = weather["current"]["precipitation"]
@@ -46,9 +51,9 @@ def predict(city: str):
 
         # Prediction
         prediction = model.predict(input_data)
-        result = "⚠️ FLOOD RISK DETECTED" if prediction[0] == 1 else "✅ No Flood Risk"
+        result = "⚠️ FLOOD RISK DETECTED" if prediction[0] == 1 else "✅ NO FLOOD RISK"
 
-        # Webhook
+        # Webhook trigger
         webhook = "https://hook.relay.app/api/v1/playbook/cmmelwojb06mx0qm6frnk4rvs/trigger/zANf0QEuPxuAJNQ2fx62F"
         payload = {
             "location": city,
@@ -61,16 +66,13 @@ def predict(city: str):
         }
         requests.post(webhook, json=payload)
 
-        return {
-            "city": city,
-            "max_temp": max_temp,
-            "min_temp": min_temp,
-            "rainfall": rainfall,
-            "humidity": humidity,
-            "wind_speed": wind_speed,
-            "prediction": result,
-            "webhook_sent": True
-        }
-    
+        return templates.TemplateResponse(
+            "result.html",
+            {"request": request, "city": city, "prediction": result}
+        )
+
     except Exception as e:
-        return {"error": str(e)}
+        return templates.TemplateResponse(
+            "result.html",
+            {"request": request, "city": city, "prediction": f"Error: {str(e)}"}
+        )
