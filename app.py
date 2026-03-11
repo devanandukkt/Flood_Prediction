@@ -71,6 +71,9 @@ def predict(request: Request, city: str = Form(...)):
             requests.post(WEBHOOK_URL, json=payload, timeout=5)
         except Exception as e:
             print("Webhook failed:", e)
+            return templates.TemplateResponse(
+                "result.html", {"request": request, "city": city, "prediction": e}
+            )
 
         return templates.TemplateResponse(
             "result.html", {"request": request, "city": city, "prediction": result}
