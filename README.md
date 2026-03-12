@@ -14,10 +14,6 @@ This project follows a separated architecture using FastAPI backend with an ML m
 
 ---
 
-![Flood Prediction Dashboard](./your-image.jpg)
-
----
-
 ## 🛠 Tech Stack
 
 ### 🔹 Backend
